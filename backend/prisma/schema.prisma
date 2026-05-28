@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  VNPAY
+  MOMO
+  BANK_TRANSFER
+  FREE
+}
+
+enum TaskStatus {
+  PENDING
+  SUBMITTED
+  REVIEWED
+  PASSED
+  FAILED
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  avatar      String?
+  phone       String?
+  role        Role     @default(STUDENT)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments     Enrollment[]
+  payments        Payment[]
+  taskSubmissions TaskSubmission[]
+  coursesCreated  Course[]         @relation("InstructorCourses")
+  lessonProgress  LessonProgress[]
+
+  @@map("users")
+}
+
+model Course {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  title        String
+  description  String
+  thumbnail    String?
+  price        Float       @default(0)
+  originalPrice Float?
+  level        CourseLevel @default(BEGINNER)
+  category     String
+  duration     Int         @default(0) // in minutes
+  totalLessons Int         @default(0)
+  language     String      @default("vi")
+  isPublished  Boolean     @default(false)
+  isFeatured   Boolean     @default(false)
+  rating       Float       @default(0)
+  totalStudents Int        @default(0)
+  requirements String[]
+  outcomes     String[]
+  instructorId String
+  instructor   User        @relation("InstructorCourses", fields: [instructorId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  payments    Payment[]
+  tasks       Task[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  videoUrl    String?
+  content     String?
+  duration    Int      @default(0) // in minutes
+  order       Int
+  isFree      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessonProgress LessonProgress[]
+
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed Boolean  @default(false)
+  watchTime Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  courseId    String
+  course      Course           @relation(fields: [courseId], references: [id])
+  status      EnrollmentStatus @default(PENDING)
+  progress    Int              @default(0) // percentage 0-100
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  expiresAt   DateTime?
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  courseId      String
+  course        Course        @relation(fields: [courseId], references: [id])
+  amount        Float
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  orderCode     String        @unique @default(cuid())
+  vnpayData     Json?
+  momoData      Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  dueDate     DateTime?
+  maxScore    Int      @default(100)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions TaskSubmission[]
+
+  @@map("tasks")
+}
+
+model TaskSubmission {
+  id         String     @id @default(cuid())
+  taskId     String
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id])
+  content    String
+  fileUrl    String?
+  score      Int?
+  feedback   String?
+  status     TaskStatus @default(PENDING)
+  submittedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+
+  @@unique([taskId, userId])
+  @@map("task_submissions")
+}
