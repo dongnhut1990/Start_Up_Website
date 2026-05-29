@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -7,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { useState } from "react";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,7 +17,7 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -41,6 +41,8 @@ export default function LoginPage() {
         router.push(redirect);
       } else if (user.role === "ADMIN") {
         router.push("/dashboard/admin");
+      } else if (user.role === "INSTRUCTOR") {
+        router.push("/dashboard/instructor");
       } else {
         router.push("/dashboard");
       }
@@ -59,7 +61,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Email */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
             <div className="relative">
@@ -75,7 +76,6 @@ export default function LoginPage() {
             {errors.email && <p className="mt-1.5 text-red-500 text-xs">{errors.email.message}</p>}
           </div>
 
-          {/* Password */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-semibold text-gray-700">Mật khẩu</label>
@@ -127,5 +127,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

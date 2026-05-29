@@ -1,43 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 
-export default function PaymentCallbackPage() {
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
+        <p className="text-gray-600 font-medium">Đang xử lý giao dịch...</p>
+      </div>
+    </div>
+  );
+}
+
+function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
 
   useEffect(() => {
     const vnpResponseCode = searchParams.get("vnp_ResponseCode");
-    const orderId = searchParams.get("orderId");
 
     if (vnpResponseCode) {
-      // VNPay callback
       const params = Object.fromEntries(searchParams.entries());
       api
         .get("/payment/vnpay/callback", { params })
         .then((res) => setStatus(res.data.success ? "success" : "failed"))
         .catch(() => setStatus("failed"));
     } else {
-      // Default fallback
       setTimeout(() => setStatus("success"), 1500);
     }
   }, [searchParams]);
 
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">Đang xử lý giao dịch...</p>
-        </div>
-      </div>
-    );
-  }
+  if (status === "loading") return <LoadingScreen />;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -77,5 +76,13 @@ export default function PaymentCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <PaymentCallbackContent />
+    </Suspense>
   );
 }
