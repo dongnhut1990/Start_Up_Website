@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../types";
+import { sendWelcomeEmail } from "../lib/email";
 
 const generateToken = (userId: string, email: string, role: string) =>
   jwt.sign({ userId, email, role }, process.env.JWT_SECRET!, {
@@ -32,6 +33,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   });
 
   const token = generateToken(user.id, user.email, user.role);
+  sendWelcomeEmail(user.email, user.name);
   res.status(201).json({ success: true, data: { user, token } });
 };
 

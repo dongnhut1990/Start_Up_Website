@@ -2,6 +2,7 @@ import { Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../types";
+import { sendEnrollmentEmail } from "../lib/email";
 
 // ---- VNPay helpers ----
 function buildVNPayUrl(params: Record<string, string>): string {
@@ -65,6 +66,8 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
         data: { totalStudents: { increment: 1 } },
       }),
     ]);
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { email: true, name: true } });
+    if (user) sendEnrollmentEmail(user.email, user.name, course.title, course.slug);
     res.json({ success: true, message: "Đăng ký khóa học miễn phí thành công", data: { method: "FREE" } });
     return;
   }
@@ -166,7 +169,7 @@ export const vnpayCallback = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   if (vnp_ResponseCode === "00") {
-    await prisma.$transaction([
+    const [, , updatedCourse] = await prisma.$transaction([
       prisma.payment.update({
         where: { id: payment.id },
         data: { status: "SUCCESS", transactionId: vnp_TransactionNo, paidAt: new Date() },
@@ -181,6 +184,8 @@ export const vnpayCallback = async (req: AuthRequest, res: Response): Promise<vo
         data: { totalStudents: { increment: 1 } },
       }),
     ]);
+    const user = await prisma.user.findUnique({ where: { id: payment.userId }, select: { email: true, name: true } });
+    if (user) sendEnrollmentEmail(user.email, user.name, updatedCourse.title, updatedCourse.slug);
     res.json({ success: true, message: "Thanh toán thành công" });
   } else {
     await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
@@ -198,7 +203,7 @@ export const momoCallback = async (req: AuthRequest, res: Response): Promise<voi
   }
 
   if (resultCode === "0") {
-    await prisma.$transaction([
+    const [, , updatedCourse] = await prisma.$transaction([
       prisma.payment.update({
         where: { id: payment.id },
         data: { status: "SUCCESS", transactionId: transId, paidAt: new Date() },
@@ -213,6 +218,8 @@ export const momoCallback = async (req: AuthRequest, res: Response): Promise<voi
         data: { totalStudents: { increment: 1 } },
       }),
     ]);
+    const user = await prisma.user.findUnique({ where: { id: payment.userId }, select: { email: true, name: true } });
+    if (user) sendEnrollmentEmail(user.email, user.name, updatedCourse.title, updatedCourse.slug);
     res.json({ success: true });
   } else {
     await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });

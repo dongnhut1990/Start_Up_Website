@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { sendGradeEmail } from "../lib/email";
 
 type AuthReq = Request & { user: { id: string; role: string } };
 
@@ -78,13 +79,24 @@ export const reviewSubmission = async (req: Request, res: Response) => {
 
   const submission = await prisma.taskSubmission.update({
     where: { id: submissionId },
-    data: {
-      score,
-      feedback,
-      status,
-      reviewedAt: new Date(),
+    data: { score, feedback, status, reviewedAt: new Date() },
+    include: {
+      user: { select: { email: true, name: true } },
+      task: { include: { course: { select: { title: true } } } },
     },
   });
+
+  sendGradeEmail(
+    submission.user.email,
+    submission.user.name,
+    submission.task.title,
+    submission.task.course.title,
+    submission.score,
+    submission.task.maxScore,
+    submission.feedback,
+    submission.status
+  );
+
   res.json({ success: true, data: { submission }, message: "Đã chấm điểm" });
 };
 
