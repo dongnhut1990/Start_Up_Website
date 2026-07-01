@@ -26,12 +26,13 @@ app.use(cors({
     if (
       !origin ||
       origin.startsWith("http://localhost") ||
+      origin.endsWith(".up.railway.app") ||
       origin.endsWith(".vercel.app") ||
-      origin === process.env.FRONTEND_URL
+      (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
     ) {
       callback(null, true);
     } else {
-      callback(null, false);
+      callback(new Error(`CORS: origin '${origin}' not allowed`), false);
     }
   },
   credentials: true,
