@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM || "TesterPro Academy <noreply@testerpro.vn>";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
@@ -158,6 +157,7 @@ function gradeHtml(
 async function send(to: string, subject: string, html: string) {
   if (!process.env.RESEND_API_KEY) return;
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: FROM, to, subject, html });
   } catch (err) {
     console.error("[Email] Failed to send:", err);
