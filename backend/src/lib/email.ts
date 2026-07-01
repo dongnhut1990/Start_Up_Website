@@ -155,7 +155,10 @@ function gradeHtml(
 // ─── Send helpers ─────────────────────────────────────────────────────────────
 
 async function send(to: string, subject: string, html: string) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!process.env.RESEND_API_KEY) {
+    console.log("[Email] Skipping email (RESEND_API_KEY not configured)");
+    return;
+  }
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: FROM, to, subject, html });
